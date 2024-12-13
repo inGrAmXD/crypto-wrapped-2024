@@ -1,5 +1,5 @@
 export class AlliumService {
-  private apiUrl: string = "https://api.allium.so/api/v1/explorer/queries/x61m9KXkKCFZBRy4F0QJ/run";
+  private apiUrl: string = "https://api.allium.so/api/v1/explorer/queries/DiXRTAyw6iyH4QW7jgdM/run";
   private apiKey: string = process.env.API_KEY || "";
 
   constructor() {
@@ -8,9 +8,9 @@ export class AlliumService {
     }
   }
 
-  public async runQuery(param201: string): Promise<any> {
+  public async runQuery(param585: string): Promise<any> {
     const requestBody = {
-      param201: param201
+      param585: param585
     };
 
     const response = await fetch(this.apiUrl, {
