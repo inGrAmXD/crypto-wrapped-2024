@@ -1,20 +1,53 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tu Año en Crypto</title>
+    <title>Your Crypto Year</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.4/dist/web3.min.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+    <script src="https://unpkg.com/web3modal@1.9.5/dist/index.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Tu Año en Crypto</h1>
-        <div class="search-container">
-            <input type="text" id="addressInput" placeholder="Ingresa tu dirección ETH">
-            <button onclick="searchAddress()">Buscar</button>
+    <canvas id="matrix"></canvas>
+    
+    <div class="hero">
+        <div class="container">
+            <div class="title-container">
+                <h1 class="animate-title">Your Crypto Year</h1>
+                <div class="title-decoration"></div>
+            </div>
+            <p class="subtitle animate-subtitle">Explore your blockchain journey through time</p>
+            
+            <div class="wallet-container animate-fade-in">
+                <div id="wallet-buttons">
+                    <button id="connectWallet" class="connect-button">
+                        <span class="button-text">Connect Wallet</span>
+                        <span class="button-icon">→</span>
+                    </button>
+                    <button id="disconnectWallet" class="disconnect-button" style="display: none;">
+                        <span class="button-text">Disconnect</span>
+                        <span class="button-icon">×</span>
+                    </button>
+                </div>
+                <div id="walletInfo" class="wallet-info" style="display: none;"></div>
+            </div>
         </div>
+    </div>
+    
+    <div class="container">
         <div id="results" class="results-container"></div>
     </div>
+
+    <footer class="footer animate-fade-in">
+        <p>Powered by Blockchain Technology</p>
+    </footer>
+
     <script src="/script.js"></script>
 </body>
 </html> 

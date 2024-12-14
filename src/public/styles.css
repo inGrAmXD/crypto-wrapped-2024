@@ -1,78 +1,350 @@
-body {
-    font-family: 'Arial', sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: #f0f2f5;
+:root {
+    --neon-green: #00ff9d;
+    --neon-blue: #00b8ff;
+    --neon-red: #ff3b30;
+    --dark-bg: #000000;
 }
 
-.container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Space Grotesk', monospace;
+}
+
+body {
+    background: var(--dark-bg);
+    color: var(--neon-green);
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+#matrix {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.hero {
+    position: relative;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 10vh;
+    z-index: 2;
+    text-align: center;
 }
 
 h1 {
-    text-align: center;
-    color: #1a1a1a;
+    font-size: clamp(3rem, 8vw, 5rem);
+    background: linear-gradient(to right, var(--neon-green), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 15px rgba(0, 255, 157, 0.5);
 }
 
-.search-container {
+.title-decoration {
+    width: min(200px, 40vw);
+    height: 3px;
+    background: var(--neon-green);
+    margin: 1rem auto;
+    box-shadow: 0 0 10px var(--neon-green);
+}
+
+.subtitle {
+    font-size: clamp(1rem, 3vw, 1.5rem);
+    color: var(--neon-green);
+    margin: 1rem 0 3rem;
+    text-shadow: 0 0 5px var(--neon-green);
+}
+
+.wallet-container {
+    width: min(90%, 600px);
+    margin: 0 auto;
     display: flex;
-    gap: 10px;
-    margin: 20px 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
 }
 
-input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 16px;
-}
-
-button {
-    padding: 10px 20px;
-    background: #0066cc;
-    color: white;
-    border: none;
-    border-radius: 4px;
+.connect-button {
+    background: transparent;
+    color: var(--neon-green);
+    border: 2px solid var(--neon-green);
+    padding: 1rem 2.5rem;
+    font-size: 1.2rem;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
 }
 
-button:hover {
-    background: #0052a3;
+.connect-button:hover {
+    background: rgba(0, 255, 157, 0.1);
+    box-shadow: 0 0 30px rgba(0, 255, 157, 0.5);
+}
+
+.wallet-info {
+    background: transparent;
+    border: 2px solid var(--neon-green);
+    padding: 1rem 2rem;
+    border-radius: 4px;
+    font-size: 1.2rem;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+    margin-bottom: 1rem;
+}
+
+.disconnect-container {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: transparent;
+    border: 1px solid var(--neon-red);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);
+}
+
+.disconnect-button {
+    background: transparent;
+    color: var(--neon-red);
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.disconnect-button::after {
+    content: '×';
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.disconnect-container:hover {
+    background: rgba(255, 59, 48, 0.1);
+    box-shadow: 0 0 20px rgba(255, 59, 48, 0.3);
+}
+
+.progress-container {
+    width: min(90%, 500px);
+    margin: 1rem auto;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 30px;
+    background: rgba(0, 255, 157, 0.1);
+    border: 2px solid var(--neon-green);
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0, 255, 157, 0.2);
+}
+
+.progress-fill {
+    width: 100%;
+    height: 100%;
+    background: var(--neon-green);
+    animation: progressAnimation 2s infinite;
+    box-shadow: 0 0 20px var(--neon-green);
+}
+
+.analyzing-text {
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    color: var(--neon-green);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 8px var(--neon-green);
+    text-align: center;
+    margin-top: 1rem;
 }
 
 .results-container {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-top: 20px;
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.95);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid var(--neon-green);
+    box-shadow: 0 0 30px rgba(0, 255, 157, 0.2);
+    z-index: 100;
 }
 
-.chain-card {
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin: 10px 0;
-    border-radius: 4px;
+.summary-card {
+    border: 1px solid var(--neon-green);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
 }
 
-.chain-title {
-    font-weight: bold;
-    color: #0066cc;
-    margin-bottom: 10px;
+.summary-card h2 {
+    color: var(--neon-green);
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 10px var(--neon-green);
 }
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
 }
 
 .stat-item {
-    background: #f8f9fa;
-    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 255, 157, 0.3);
+    padding: 1.5rem;
+    border-radius: 8px;
+    color: var(--neon-green);
+}
+
+.stat-item strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+
+@keyframes progressAnimation {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@media (max-width: 768px) {
+    .hero {
+        padding-top: 5vh;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-bar {
+        height: 20px;
+    }
+    
+    .wallet-container {
+        width: 95%;
+    }
+}
+
+@media (max-width: 480px) {
+    .analyzing-text {
+        font-size: 1rem;
+    }
+    
+    .progress-bar {
+        height: 15px;
+    }
+    
+    .results-container {
+        padding: 1rem;
+    }
+    
+    .summary-card {
+        padding: 1rem;
+    }
+}
+
+.terminal-container {
+    width: min(90%, 800px);
+    margin: 1rem auto;
+    position: relative;
+}
+
+.terminal-input {
+    width: 100%;
+    background: transparent;
+    border: 2px solid var(--neon-green);
     border-radius: 4px;
+    padding: 1rem;
+    color: var(--neon-green);
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+}
+
+.terminal-prompt {
+    color: var(--neon-green);
+    font-size: 1.4rem;
+}
+
+.terminal-text {
+    flex-grow: 1;
+    animation: typing 1s steps(1) infinite;
+}
+
+@keyframes typing {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .terminal-input {
+        font-size: 1rem;
+        padding: 0.8rem;
+    }
+    
+    .terminal-prompt {
+        font-size: 1.2rem;
+    }
+    
+    .wallet-info {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+    }
 } 
+
+.disconnect-button {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: transparent;
+    color: var(--neon-red);
+    border: 1px solid var(--neon-red);
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);
+}
+
+.disconnect-button:hover {
+    background: rgba(255, 59, 48, 0.1);
+    box-shadow: 0 0 20px rgba(255, 59, 48, 0.3);
+}
