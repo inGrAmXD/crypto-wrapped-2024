@@ -1,10 +1,14 @@
 import { AlliumController } from "../controllers/AlliumController";
 import { CryptoYearAnalyzer } from "../CryptoYearAnalyzer";
+import { NFTGenerator } from "../NFTGenerator";
+import { ExtendedStatsService } from "../services/ExtendedStatsService";
 import { file } from "bun";
 import { join } from "path";
 
 const controller = new AlliumController();
 const analyzer = new CryptoYearAnalyzer(process.env.API_KEY || "");
+const nftGenerator = new NFTGenerator();
+const extendedStatsService = new ExtendedStatsService(process.env.API_KEY || "");
 
 export default async function alliumRoutes(req: Request): Promise<Response> {
   const url = new URL(req.url);
@@ -75,6 +79,50 @@ export default async function alliumRoutes(req: Request): Promise<Response> {
     }
     
     return controller.handleMultipleQueries(addresses);
+  }
+
+  // Endpoint para previsualización del NFT
+  if (url.pathname === "/nft/preview" && req.method === "POST") {
+    try {
+      const body = await req.json();
+      const { stats } = body;
+      
+      if (!stats) {
+        return new Response(JSON.stringify({ error: "Stats son requeridos" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      
+      const attributes = nftGenerator.generateNFTMetadata(stats);
+      const svgImage = nftGenerator.generateNFTImage(attributes);
+      
+      return new Response(svgImage, {
+        headers: { "Content-Type": "image/svg+xml" },
+      });
+    } catch (error: any) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  // Nuevo endpoint para stats extendidos
+  const extendedStatsMatch = url.pathname.match(/^\/extended-stats\/(.+)$/);
+  if (extendedStatsMatch && req.method === "GET") {
+    const address = decodeURIComponent(extendedStatsMatch[1]);
+    try {
+      const extendedStats = await extendedStatsService.getExtendedStats(address);
+      return new Response(JSON.stringify(extendedStats), {
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch (error: any) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }
 
   return new Response("Not Found", { status: 404 });

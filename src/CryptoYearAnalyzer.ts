@@ -1,12 +1,16 @@
+import { ExtendedStatsService } from './services/ExtendedStatsService';
+
 export class CryptoYearAnalyzer {
   private apiUrl: string = "https://api.allium.so/api/v1/explorer/queries/DiXRTAyw6iyH4QW7jgdM/run";
   private apiKey: string;
+  private extendedStatsService: ExtendedStatsService;
 
   constructor(apiKey: string) {
     if (!apiKey) {
       throw new Error("API_KEY es requerida para inicializar CryptoYearAnalyzer");
     }
     this.apiKey = apiKey;
+    this.extendedStatsService = new ExtendedStatsService(apiKey);
   }
 
   /**
@@ -16,7 +20,15 @@ export class CryptoYearAnalyzer {
    */
   public async getYearInCryptoStats(address: string): Promise<YearInCryptoStats> {
     const rawData = await this.fetchDataFromAllium(address);
-    return this.processRawData(rawData);
+    const stats = this.processRawData(rawData);
+
+    // Obtener datos de DEX
+    const dexStats = await this.extendedStatsService.getExtendedStats(address);
+
+    return {
+      ...stats,
+      dexStats
+    };
   }
 
   private async fetchDataFromAllium(address: string): Promise<any> {
