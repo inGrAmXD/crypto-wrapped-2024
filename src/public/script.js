@@ -222,38 +222,74 @@ async function initializeStories() {
 }
 
 async function loadUserData() {
-    // Aquí cargaríamos los datos reales de las APIs
-    storyData = [
-        {
-            type: 'welcome',
-            title: "Welcome to Your Crypto Year in Review",
-            subtitle: "Let's explore your Web3 journey of 2023"
-        },
-        {
-            type: 'transactions',
-            title: "Your Transaction Count",
-            value: "127",
-            subtitle: "You're in the top 10% of active traders!"
-        },
-        {
-            type: 'volume',
-            title: "Total Trading Volume",
-            value: "$43,291",
-            subtitle: "Across zkSync and Optimism"
-        },
-        {
-            type: 'favorite',
-            title: "Your Favorite Chain",
-            value: "zkSync Era",
-            subtitle: "With 89 transactions"
-        },
-        {
+    try {
+        if (!userAddress) throw new Error('No wallet connected');
+
+        // Obtener datos reales de la API
+        const stats = await getAddressStats(userAddress);
+        
+        // Transformar los datos para las historias
+        storyData = [
+            {
+                type: 'welcome',
+                title: "Welcome to Your Crypto Year in Review",
+                subtitle: `Let's explore your Web3 journey of 2024, ${userAddress.substring(0, 6)}...`
+            },
+            {
+                type: 'transactions',
+                title: "Your Transaction Count",
+                value: stats.totalTransactions.toString(),
+                subtitle: "Total transactions across all chains"
+            },
+            {
+                type: 'volume',
+                title: "Total Value Transferred",
+                value: `${stats.totalValueTransferred.toFixed(4)} ETH`,
+                subtitle: `Across ${stats.chains.filter(c => c.numberOfTransactions > 0).length} chains`
+            },
+            {
+                type: 'chains',
+                title: "Chain Activity",
+                value: stats.mostUsedChain,
+                subtitle: `Most active on ${stats.mostUsedChain} with ${
+                    stats.chains.find(c => c.chain === stats.mostUsedChain)?.numberOfTransactions || 0
+                } transactions`
+            },
+            {
+                type: 'contracts',
+                title: "Smart Contract Interactions",
+                value: stats.totalContractsUsed.toString(),
+                subtitle: "Different contracts interacted with"
+            }
+        ];
+
+        // Si hay actividad DEX, agregar historia de DEX
+        if (stats.dexStats.totalVolumeUSD > 0) {
+            storyData.push({
+                type: 'dex',
+                title: "DEX Activity",
+                value: `$${stats.dexStats.totalVolumeUSD.toLocaleString()}`,
+                subtitle: `Total volume across ${Object.keys(stats.dexStats.chains).length} chains`
+            });
+        }
+
+        // Agregar historia final
+        storyData.push({
             type: 'summary',
             title: "That's a Wrap!",
             subtitle: "Share your crypto journey with friends",
             shareButton: true
-        }
-    ];
+        });
+
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        storyData = [{
+            type: 'error',
+            title: "Oops!",
+            subtitle: "There was an error loading your data. Please try again.",
+            error: true
+        }];
+    }
 }
 
 function initializeProgressBar() {
@@ -285,23 +321,46 @@ function showStory(index) {
     const story = storyData[index];
     const storiesContent = document.querySelector('.stories-content');
     
-    storiesContent.innerHTML = `
+    let content = `
         <div class="story-content" style="animation: fadeInUp 0.5s ease-out">
             <h2>${story.title}</h2>
-            ${story.value ? `<div class="stat-highlight">${story.value}</div>` : ''}
-            <p>${story.subtitle}</p>
-            ${story.shareButton ? `
+    `;
+
+    if (story.error) {
+        content += `
+            <div class="error-message">
+                <p>${story.subtitle}</p>
+                <button onclick="retryConnection()" class="retry-button">
+                    Try Again
+                </button>
+            </div>
+        `;
+    } else {
+        if (story.value) {
+            content += `<div class="stat-highlight">${story.value}</div>`;
+        }
+        content += `<p>${story.subtitle}</p>`;
+        
+        if (story.shareButton) {
+            content += `
                 <button onclick="shareResults()" class="share-button">
                     Share Results
                 </button>
-            ` : ''}
-        </div>
-    `;
+            `;
+        }
+    }
+
+    content += `</div>`;
+    storiesContent.innerHTML = content;
 
     // Configurar temporizador para la siguiente historia
     if (index < storyData.length - 1) {
         storyTimeout = setTimeout(() => showStory(index + 1), STORY_DURATION);
     }
+}
+
+function retryConnection() {
+    initializeStories();
 }
 
 function navigateStory(direction) {
@@ -322,3 +381,25 @@ window.addEventListener('load', () => {
         window.ethereum.autoRefreshOnNetworkChange = false;
     }
 });
+
+async function getAddressStats(address) {
+    try {
+        const response = await fetch('/api/stats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ address })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al obtener datos');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error:', error);
+        throw error;
+    }
+}
