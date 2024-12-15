@@ -376,116 +376,46 @@ async function forceCleanup() {
 
 // Función mejorada para mostrar la pantalla de wallet conectada
 async function showWalletConnectedScreen(stats) {
-    if (!stats) {
-        console.error('No stats available');
-        return;
-    }
-
-    // Ocultar otras pantallas
-    document.getElementById('initialScreen').style.display = 'none';
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('storiesContainer').style.display = 'none';
-
     const walletConnectedScreen = document.getElementById('walletConnectedScreen');
     
-    // Asegurarse de que la pantalla sea visible
-    walletConnectedScreen.style.display = 'flex';
-    walletConnectedScreen.style.opacity = '0';
-
-    // Actualizar contenido
     const content = `
         <div class="connected-content">
-            <h2 class="animate-in">Wallet Connected!</h2>
-            
-            <div class="wallet-info animate-in" style="animation-delay: 0.2s">
-                <p>Connected to: <span class="highlight">${walletConnector.currentWalletType.toUpperCase()}</span></p>
-                <p class="address-container">
-                    Address: 
-                    <span class="address highlight">
-                        ${walletConnector.userAddress}
-                        <button class="copy-address" onclick="copyAddress('${walletConnector.userAddress}')">
-                            <svg width="20" height="20" viewBox="0 0 24 24">
-                                <path fill="#1DB954" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                            </svg>
-                        </button>
-                    </span>
-                </p>
-            </div>
-            
-            <div class="wallet-stats animate-in" style="animation-delay: 0.4s">
-                <div class="stat-item">
-                    <div class="stat-value counter" data-target="${stats.totalTransactions}">0</div>
-                    <div class="stat-label">Total Transactions</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">$<span class="counter" data-target="${stats.totalValueTransferred}">0</span></div>
-                    <div class="stat-label">Total Value Transferred</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value chain-name">${stats.mostUsedChain.charAt(0).toUpperCase() + stats.mostUsedChain.slice(1)}</div>
-                    <div class="stat-label">Most Used Chain</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value counter" data-target="${stats.chains.filter(chain => chain.numberOfTransactions > 0).length}">0</div>
-                    <div class="stat-label">Active Chains</div>
-                </div>
-            </div>
-            
-            <button id="startWrappedBtn" class="start-wrapped-btn animate-in" style="animation-delay: 0.6s">
-                View My Crypto Wrapped
+            <h2>Wallet Connected!</h2>
+            <div class="wallet-type">Connected to: METAMASK</div>
+            <button id="startWrappedBtn" class="start-wrapped-btn">
+                VIEW MY CRYPTO WRAPPED
                 <span class="btn-icon">→</span>
+            </button>
+            <button id="disconnectBtn" class="disconnect-btn">
+                Disconnect Wallet
+                <span class="btn-icon">←</span>
             </button>
         </div>
     `;
 
     walletConnectedScreen.innerHTML = content;
+    walletConnectedScreen.style.display = 'flex';
+    
+    // Event listener para el botón de wrapped
+    document.getElementById('startWrappedBtn').addEventListener('click', () => {
+        walletConnectedScreen.style.display = 'none';
+        initializeStories(stats);
+    });
 
-    // Agregar event listener al botón
-    const startWrappedBtn = document.getElementById('startWrappedBtn');
-    if (startWrappedBtn) {
-        startWrappedBtn.addEventListener('click', async () => {
-            walletConnectedScreen.style.opacity = '0';
-            setTimeout(async () => {
-                walletConnectedScreen.style.display = 'none';
-                await initializeStories(stats); // Usar los stats que ya tenemos
-            }, 500);
-        });
-    }
-
-    // Mostrar con animación
-    requestAnimationFrame(() => {
-        walletConnectedScreen.style.opacity = '1';
-        animateNumbers();
+    // Event listener para el botón de desconectar
+    document.getElementById('disconnectBtn').addEventListener('click', () => {
+        window.location.reload();
     });
 }
 
-// Función para animar números
-function animateNumbers() {
-    const counters = document.querySelectorAll('.counter');
-    const animationDuration = 1500;
-    const framesPerSecond = 60;
-    const totalFrames = animationDuration / 1000 * framesPerSecond;
+// Función auxiliar para capitalizar
+function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
-    counters.forEach(counter => {
-        const target = parseFloat(counter.dataset.target);
-        const increment = target / totalFrames;
-        let current = 0;
-        let frame = 0;
-
-        const updateCounter = () => {
-            current += increment;
-            frame++;
-
-            if (frame <= totalFrames) {
-                counter.textContent = formatNumber(Math.floor(current));
-                requestAnimationFrame(updateCounter);
-            } else {
-                counter.textContent = formatNumber(target);
-            }
-        };
-
-        updateCounter();
-    });
+// Función para formatear números
+function formatNumber(num) {
+    return new Intl.NumberFormat('en-US').format(num);
 }
 
 // Función para copiar dirección
@@ -511,7 +441,7 @@ function copyAddress(address) {
 async function connectSpecificWallet(walletType) {
     try {
         hideWalletModal();
-        showLoadingScreen(); // Mostrar pantalla de carga
+        showLoadingScreen();
         
         await forceCleanup();
         await walletConnector.disconnect();
@@ -525,18 +455,15 @@ async function connectSpecificWallet(walletType) {
         }
 
         if (connectionResult?.address) {
-            updateUIForConnectedWallet();
-            
             // Obtener estadísticas
             const stats = await fetchUserStats(walletConnector.userAddress);
             
             // Ocultar pantalla de carga
             document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('initialScreen').style.display = 'none';
             
-            // Mostrar pantalla de wallet conectada con los datos
+            // Mostrar pantalla de wallet conectada
             await showWalletConnectedScreen(stats);
-        } else {
-            throw new Error('No address returned from wallet connection');
         }
 
     } catch (error) {
