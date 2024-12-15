@@ -1,144 +1,158 @@
-import { AlliumController } from "../controllers/AlliumController";
 import { CryptoYearAnalyzer } from "../CryptoYearAnalyzer";
-import { NFTGenerator } from "../NFTGenerator";
-import { ExtendedStatsService } from "../services/ExtendedStatsService";
 import { file } from "bun";
 import { join } from "path";
+import { ethers } from 'ethers';
 
-const controller = new AlliumController();
 const analyzer = new CryptoYearAnalyzer(process.env.API_KEY || "");
-const nftGenerator = new NFTGenerator();
-const extendedStatsService = new ExtendedStatsService(process.env.API_KEY || "");
+
+const NFT_CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS_OPTIMISM || '';
+const NFT_ABI = [
+    "function mint(address to, string memory tokenURI) public",
+    "function hasMinted(address user) public view returns (bool)"
+];
 
 export default async function alliumRoutes(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  
-  // Servir archivos estáticos
-  if (req.method === "GET") {
-    let path = url.pathname;
-    
-    // Si es la ruta raíz, servir index.html
-    if (path === "/") {
-      path = "/index.html";
+    const url = new URL(req.url);
+    const path = url.pathname;
+
+    // API endpoint
+    if (path === '/api/stats' && req.method === 'POST') {
+        try {
+            const body = await req.json();
+            const { address } = body;
+
+            if (!address) {
+                return new Response(JSON.stringify({ error: "Dirección requerida" }), {
+                    status: 400,
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                });
+            }
+
+            const stats = await analyzer.getYearInCryptoStats(address);
+            return new Response(JSON.stringify(stats), {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Cache-Control": "public, max-age=300",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        } catch (error) {
+            return new Response(JSON.stringify({ 
+                error: error instanceof Error ? error.message : "Error desconocido" 
+            }), {
+                status: 500,
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
     }
 
-    // Intentar servir archivo estático
+    // Nuevo endpoint para minteo
+    if (path === '/api/mint' && req.method === 'POST') {
+        try {
+            const { address } = await req.json();
+
+            if (!address) {
+                return new Response(JSON.stringify({ error: "Dirección requerida" }), {
+                    status: 400,
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                });
+            }
+
+            // Obtener los datos del año
+            const stats = await analyzer.getYearInCryptoStats(address);
+
+            // Preparar los datos del NFT
+            const nftData = {
+                contractAddress: process.env.CONTRACT_ADDRESS_OPTIMISM,
+                abi: ["function mint(string memory tokenURI) public"],
+                chainId: 11155420, // Optimism Sepolia
+                metadata: {
+                    name: `Crypto Year in Review 2024 - ${address.substring(0, 6)}`,
+                    description: "Your Web3 journey of 2024",
+                    image: "ipfs://...", // Aquí irá la imagen generada
+                    attributes: [
+                        {
+                            trait_type: "Total Transactions",
+                            value: stats.totalTransactions
+                        },
+                        {
+                            trait_type: "Most Used Chain",
+                            value: stats.mostUsedChain
+                        },
+                        {
+                            trait_type: "Total Value Transferred",
+                            value: stats.totalValueTransferred
+                        }
+                    ]
+                }
+            };
+
+            return new Response(JSON.stringify(nftData), {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+
+        } catch (error) {
+            return new Response(JSON.stringify({ 
+                error: error instanceof Error ? error.message : "Error en el minteo" 
+            }), {
+                status: 500,
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
+    }
+
+    // Servir archivos estáticos
     try {
-      const publicPath = join(import.meta.dir, "../public", path);
-      const staticFile = await file(publicPath).text();
-      const contentType = getContentType(path);
-      
-      return new Response(staticFile, {
-        headers: { "Content-Type": contentType },
-      });
-    } catch (error) {
-      // Si no es un archivo estático, continuar con las rutas de la API
-    }
-  }
-
-  // Rutas existentes de la API...
-  const singleAddressMatch = url.pathname.match(/^\/api\/address\/(.+)$/);
-  if (singleAddressMatch && req.method === "GET") {
-    const address = decodeURIComponent(singleAddressMatch[1]);
-    return controller.handleQuery(address);
-  }
-
-  const statsAddressMatch = url.pathname.match(/^\/stats\/(.+)$/);
-  if (statsAddressMatch && req.method === "GET") {
-    const address = decodeURIComponent(statsAddressMatch[1]);
-    try {
-      const stats = await analyzer.getYearInCryptoStats(address);
-      return new Response(JSON.stringify(stats), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error: any) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-  }
-
-  if (url.pathname === "/addresses" && req.method === "GET") {
-    const addressesParam = url.searchParams.get("addresses");
-    
-    if (!addressesParam) {
-      return new Response(JSON.stringify({ error: "El parámetro 'addresses' es requerido" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    
-    const addresses = addressesParam.split(",").map(addr => addr.trim()).filter(addr => addr !== "");
-    
-    if (addresses.length === 0) {
-      return new Response(JSON.stringify({ error: "Debe proporcionar al menos una dirección válida" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    
-    return controller.handleMultipleQueries(addresses);
-  }
-
-  // Endpoint para previsualización del NFT
-  if (url.pathname === "/nft/preview" && req.method === "POST") {
-    try {
-      const body = await req.json();
-      const { stats } = body;
-      
-      if (!stats) {
-        return new Response(JSON.stringify({ error: "Stats son requeridos" }), {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
+        // Si es la ruta raíz, servir index.html
+        const filePath = path === '/' ? '/index.html' : path;
+        const publicPath = join(import.meta.dir, "../public", filePath);
+        const staticFile = await file(publicPath).text();
+        
+        return new Response(staticFile, {
+            headers: { 
+                "Content-Type": getContentType(filePath),
+                "Cache-Control": "public, max-age=3600"
+            }
         });
-      }
-      
-      const attributes = nftGenerator.generateNFTMetadata(stats);
-      const svgImage = nftGenerator.generateNFTImage(attributes);
-      
-      return new Response(svgImage, {
-        headers: { "Content-Type": "image/svg+xml" },
-      });
-    } catch (error: any) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+    } catch (error) {
+        return new Response("Not Found", { status: 404 });
     }
-  }
-
-  // Nuevo endpoint para stats extendidos
-  const extendedStatsMatch = url.pathname.match(/^\/extended-stats\/(.+)$/);
-  if (extendedStatsMatch && req.method === "GET") {
-    const address = decodeURIComponent(extendedStatsMatch[1]);
-    try {
-      const extendedStats = await extendedStatsService.getExtendedStats(address);
-      return new Response(JSON.stringify(extendedStats), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error: any) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-  }
-
-  return new Response("Not Found", { status: 404 });
 }
 
 function getContentType(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase();
-  const contentTypes: { [key: string]: string } = {
-    'html': 'text/html',
-    'css': 'text/css',
-    'js': 'application/javascript',
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'gif': 'image/gif',
-    'svg': 'image/svg+xml',
-  };
-  return contentTypes[ext || ''] || 'text/plain';
+    const ext = path.split('.').pop()?.toLowerCase();
+    const contentTypes: { [key: string]: string } = {
+        'html': 'text/html',
+        'css': 'text/css',
+        'js': 'application/javascript',
+        'json': 'application/json',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'ico': 'image/x-icon'
+    };
+    return contentTypes[ext || ''] || 'text/plain';
+}
+
+async function uploadToIPFS(metadata: any): Promise<string> {
+    // Implementar lógica de subida a IPFS
+    // Puedes usar servicios como Pinata o nft.storage
+    return "ipfs://...";
 } 

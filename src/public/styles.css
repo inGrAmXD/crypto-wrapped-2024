@@ -1,8 +1,16 @@
+:root {
+    --primary-color: #4158D0;
+    --secondary-color: #C850C0;
+    --accent-color: #FFCC70;
+    --background-dark: #1a1a2e;
+    --background-light: #2a2a4e;
+}
+
 body {
     margin: 0;
     padding: 0;
     font-family: 'Montserrat', sans-serif;
-    background: #000;
+    background: var(--background-dark);
     color: #fff;
     overflow: hidden;
 }
@@ -15,7 +23,7 @@ body {
     align-items: center;
     justify-content: center;
     position: relative;
-    background: linear-gradient(45deg, #1DB954, #191414);
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
 }
 
 .hero-content {
@@ -27,7 +35,7 @@ body {
 h1 {
     font-size: 4rem;
     margin-bottom: 1rem;
-    background: linear-gradient(to right, #fff, #1DB954);
+    background: linear-gradient(to right, #fff, var(--primary-color));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     animation: fadeInUp 1s ease-out;
@@ -64,10 +72,11 @@ h1 {
     gap: 1rem;
     min-width: 200px;
     justify-content: center;
+    background: var(--primary-color);
 }
 
 .connect-wallet-btn {
-    background: #1DB954;
+    background: var(--primary-color);
 }
 
 .disconnect-wallet-btn {
@@ -153,7 +162,7 @@ h1 {
     font-size: 6rem;
     font-weight: bold;
     margin: 1rem 0;
-    background: linear-gradient(45deg, #1DB954, #4CAF50);
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
@@ -243,4 +252,329 @@ h1 {
     color: white;
     font-size: 24px;
     cursor: pointer;
+}
+
+.loading-screen {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+.loading-content {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--accent-color);
+    border-top: 5px solid transparent;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.start-wrapped-btn {
+    background: var(--primary-color) !important;
+    border: none !important;
+    color: white !important;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.start-wrapped-btn:hover {
+    background: var(--secondary-color) !important;
+    transform: translateY(-2px);
+}
+
+.start-wrapped-btn .btn-icon {
+    font-size: 1.6rem;
+    transition: transform 0.3s ease;
+}
+
+.start-wrapped-btn:hover .btn-icon {
+    transform: translateX(5px);
+}
+
+.connected-content {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.connected-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(to right, #fff, #1DB954);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.connected-content p {
+    font-size: 1.2rem;
+    margin: 0.8rem 0;
+    color: #ffffff;
+}
+
+.connected-content span {
+    color: #1DB954;
+    font-weight: bold;
+}
+
+.wallet-connected-screen {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background: linear-gradient(to bottom, var(--background-dark), var(--background-light));
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.connected-content {
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin: auto;
+    padding: 2rem 0;
+}
+
+.connected-content h2 {
+    font-size: clamp(2rem, 6vw, 3rem);
+    margin-bottom: 0.5rem;
+    background: linear-gradient(to right, #fff, var(--primary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+}
+
+.wallet-type {
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    color: #1DB954;
+    margin: 0.5rem 0;
+    font-weight: 500;
+}
+
+.start-wrapped-btn {
+    background: rgba(29, 185, 84, 0.1);
+    border: 1px solid #1DB954;
+    color: #1DB954;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: clamp(1rem, 3vw, 1.2rem);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+}
+
+.disconnect-btn {
+    background: rgba(255, 69, 58, 0.1);
+    border: 1px solid #FF453A;
+    color: #FF453A;
+    padding: 12px 24px;
+    border-radius: 30px;
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 1rem auto 0;
+    transition: all 0.3s ease;
+}
+
+.start-wrapped-btn:hover {
+    background: rgba(29, 185, 84, 0.2);
+    transform: translateY(-2px);
+}
+
+.disconnect-btn:hover {
+    background: rgba(255, 69, 58, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Ajustes para pantallas pequeñas */
+@media (max-height: 600px) {
+    .connected-content {
+        margin: 1rem auto;
+        padding: 1rem 0;
+        gap: 1rem;
+    }
+}
+
+.nft-preview-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.nft-preview-content {
+    background: var(--background-dark);
+    padding: 2rem;
+    border-radius: 20px;
+    max-width: 800px;
+    width: 90%;
+}
+
+.nft-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.nft-image {
+    background: transparent;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.nft-info {
+    color: white;
+    text-align: center;
+}
+
+.nft-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.stat {
+    padding: 1rem;
+    background: rgba(65, 88, 208, 0.1);
+    border-radius: 10px;
+}
+
+.stat .label {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.stat .value {
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.mint-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.mint-button, .close-button {
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    border: none;
+    font-weight: 600;
+}
+
+.mint-button {
+    background: var(--primary-color);
+    color: white;
+    flex: 2;
+}
+
+.close-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    flex: 1;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.mint-button:hover {
+    transform: translateY(-2px);
+    background: var(--secondary-color);
+}
+
+.close-button:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.mint-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.mint-button.success {
+    background: #22c55e;
+}
+
+.mint-button.error {
+    background: #ef4444;
+}
+
+.opensea-link {
+    display: inline-block;
+    margin-top: 1rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.opensea-link:hover {
+    text-decoration: underline;
 }
