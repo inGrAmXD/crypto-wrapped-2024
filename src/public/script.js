@@ -1,225 +1,324 @@
-async function searchAddress() {
-    const addressInput = document.getElementById('addressInput');
-    const resultsDiv = document.getElementById('results');
-    const address = addressInput.value.trim();
+let userAddress = null;
+let currentStory = 0;
+let storyData = [];
+let storyTimeout;
+let currentWalletType = null;
 
-    if (!address) {
-        alert('Por favor ingresa una dirección');
-        return;
-    }
+// Configuración de historias
+const STORY_DURATION = 5000; // 5 segundos por historia
+
+function showWalletModal() {
+    const modal = document.getElementById('walletModal');
+    modal.style.display = 'flex';
+}
+
+function hideWalletModal() {
+    const modal = document.getElementById('walletModal');
+    modal.style.display = 'none';
+}
+
+async function connectSpecificWallet(walletType) {
+    hideWalletModal();
 
     try {
-        resultsDiv.innerHTML = 'Cargando...';
-        const response = await fetch(`/stats/${address}`);
-        const data = await response.json();
+        // Primero desconectamos cualquier wallet existente
+        await forceDisconnectAll();
 
-        if (response.ok) {
-            displayResults(data);
-            checkMintEligibility(address, data);
-        } else {
-            resultsDiv.innerHTML = `<p class="error">${data.error || 'Error al buscar la dirección'}</p>`;
+        if (walletType === 'metamask') {
+            if (typeof window.ethereum === 'undefined') {
+                alert('Please install MetaMask!');
+                return;
+            }
+            
+            // Forzar nueva conexión de MetaMask
+            const accounts = await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{
+                    eth_accounts: {}
+                }]
+            });
+
+            if (!accounts || accounts.length === 0) {
+                throw new Error('No accounts selected');
+            }
+
+            const selectedAccounts = await window.ethereum.request({
+                method: 'eth_requestAccounts'
+            });
+
+            userAddress = selectedAccounts[0];
+            currentWalletType = 'metamask';
+
+        } else if (walletType === 'phantom') {
+            if (typeof window.solana === 'undefined') {
+                alert('Please install Phantom!');
+                return;
+            }
+
+            const { solana } = window;
+            
+            // Forzar desconexión de Phantom
+            if (solana.isConnected) {
+                await solana.disconnect();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            try {
+                const response = await solana.connect({ onlyIfTrusted: false });
+                userAddress = response.publicKey.toString();
+                currentWalletType = 'phantom';
+            } catch (err) {
+                console.error("Phantom connection error:", err);
+                throw new Error('Failed to connect Phantom');
+            }
         }
+
+        if (userAddress) {
+            updateUIForConnectedWallet();
+            await initializeStories();
+            setupWalletListeners();
+        }
+
     } catch (error) {
-        resultsDiv.innerHTML = '<p class="error">Error al conectar con el servidor</p>';
+        console.error('Wallet connection error:', error);
+        alert('Error connecting wallet: ' + error.message);
+        await forceDisconnectAll();
     }
 }
 
-function displayResults(data) {
-    const resultsDiv = document.getElementById('results');
+async function forceDisconnectAll() {
+    try {
+        // Desconectar MetaMask
+        if (window.ethereum) {
+            try {
+                await window.ethereum.request({
+                    method: "wallet_requestPermissions",
+                    params: [{
+                        eth_accounts: {}
+                    }]
+                });
+            } catch (e) {
+                console.log("MetaMask disconnect error:", e);
+            }
+        }
+
+        // Desconectar Phantom
+        if (window.solana?.isConnected) {
+            try {
+                await window.solana.disconnect();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (e) {
+                console.log("Phantom disconnect error:", e);
+            }
+        }
+
+        // Limpiar estado
+        userAddress = null;
+        currentWalletType = null;
+        
+        // Limpiar localStorage y sessionStorage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Actualizar UI
+        updateUIForDisconnected();
+
+    } catch (error) {
+        console.error('Force disconnect error:', error);
+    }
+}
+
+function updateUIForDisconnected() {
+    document.getElementById('walletAddress').textContent = '';
+    document.getElementById('connectWalletBtn').style.display = 'flex';
+    document.getElementById('disconnectWalletBtn').style.display = 'none';
+    document.getElementById('storiesContainer').style.display = 'none';
+    document.getElementById('initialScreen').style.display = 'flex';
+}
+
+function updateUIForConnectedWallet() {
+    if (!userAddress) return;
     
-    let html = `
-        <div class="dashboard-grid">
-            <div class="card nft-preview">
-                <h2>Tu NFT Preview</h2>
-                <div id="nft-image"></div>
-            </div>
-            
-            <div class="card">
-                <h2>Resumen Total</h2>
-                <div class="stats-highlight">${data.totalTransactions}</div>
-                <p>Transacciones Totales</p>
-                <div class="stats-highlight">${data.totalValueTransferred.toFixed(2)} ETH</div>
-                <p>Valor Total Transferido</p>
-            </div>
+    document.getElementById('walletAddress').textContent = 
+        `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
+    document.getElementById('connectWalletBtn').style.display = 'none';
+    document.getElementById('disconnectWalletBtn').style.display = 'flex';
+}
 
-            <div class="card">
-                <h2>Actividad DEX</h2>
-                <div class="stats-highlight">$${data.dexStats?.totalVolumeUSD.toLocaleString()}</div>
-                <p>Volumen Total</p>
-                <div class="chain-badges">
-                    ${data.dexStats?.topProjects.map(project => 
-                        `<span class="chain-badge">${project}</span>`
-                    ).join('')}
-                </div>
-            </div>
-        </div>
+function setupWalletListeners() {
+    // Limpiar listeners existentes
+    if (window.ethereum) {
+        window.ethereum.removeAllListeners?.();
+    }
+    
+    if (currentWalletType === 'metamask' && window.ethereum) {
+        window.ethereum.on('accountsChanged', async (accounts) => {
+            if (!accounts || accounts.length === 0) {
+                await forceDisconnectAll();
+            }
+        });
 
-        <div class="charts-grid">
-            <div class="chart-container">
-                <canvas id="chainActivityChart"></canvas>
-            </div>
+        window.ethereum.on('disconnect', async () => {
+            await forceDisconnectAll();
+        });
+    }
 
-            <div class="chart-container">
-                <canvas id="volumeTimelineChart"></canvas>
-            </div>
+    if (currentWalletType === 'phantom' && window.solana) {
+        window.solana.on('disconnect', async () => {
+            await forceDisconnectAll();
+        });
+    }
+}
+
+// Función principal de conexión
+async function connectWallet() {
+    if (userAddress) {
+        await forceDisconnectAll();
+    }
+    showWalletModal();
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', async () => {
+    // Forzar desconexión al inicio
+    await forceDisconnectAll();
+
+    // Configurar listeners
+    document.querySelectorAll('.wallet-option').forEach(button => {
+        button.addEventListener('click', async () => {
+            await connectSpecificWallet(button.dataset.wallet);
+        });
+    });
+
+    document.querySelector('.close-modal').addEventListener('click', hideWalletModal);
+    
+    document.getElementById('walletModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            hideWalletModal();
+        }
+    });
+
+    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+    document.getElementById('disconnectWalletBtn').addEventListener('click', forceDisconnectAll);
+});
+
+// Funciones de historias
+async function initializeStories() {
+    // Simular carga de datos
+    await loadUserData();
+    
+    // Ocultar pantalla inicial
+    document.getElementById('initialScreen').style.display = 'none';
+    
+    // Mostrar contenedor de historias
+    const storiesContainer = document.getElementById('storiesContainer');
+    storiesContainer.style.display = 'block';
+    
+    // Inicializar barra de progreso
+    initializeProgressBar();
+    
+    // Mostrar primera historia
+    showStory(0);
+}
+
+async function loadUserData() {
+    // Aquí cargaríamos los datos reales de las APIs
+    storyData = [
+        {
+            type: 'welcome',
+            title: "Welcome to Your Crypto Year in Review",
+            subtitle: "Let's explore your Web3 journey of 2023"
+        },
+        {
+            type: 'transactions',
+            title: "Your Transaction Count",
+            value: "127",
+            subtitle: "You're in the top 10% of active traders!"
+        },
+        {
+            type: 'volume',
+            title: "Total Trading Volume",
+            value: "$43,291",
+            subtitle: "Across zkSync and Optimism"
+        },
+        {
+            type: 'favorite',
+            title: "Your Favorite Chain",
+            value: "zkSync Era",
+            subtitle: "With 89 transactions"
+        },
+        {
+            type: 'summary',
+            title: "That's a Wrap!",
+            subtitle: "Share your crypto journey with friends",
+            shareButton: true
+        }
+    ];
+}
+
+function initializeProgressBar() {
+    const progressBar = document.querySelector('.story-progress-bar');
+    progressBar.innerHTML = storyData.map(() => 
+        `<div class="progress-segment"><div class="progress-fill"></div></div>`
+    ).join('');
+}
+
+function showStory(index) {
+    if (index < 0 || index >= storyData.length) return;
+    
+    clearTimeout(storyTimeout);
+    currentStory = index;
+    
+    // Actualizar barra de progreso
+    document.querySelectorAll('.progress-segment').forEach((segment, i) => {
+        if (i < index) {
+            segment.classList.add('active');
+        } else if (i === index) {
+            segment.classList.add('active');
+            segment.querySelector('.progress-fill').style.animation = 'progressAnimation 5s linear';
+        } else {
+            segment.classList.remove('active');
+        }
+    });
+
+    // Mostrar contenido de la historia
+    const story = storyData[index];
+    const storiesContent = document.querySelector('.stories-content');
+    
+    storiesContent.innerHTML = `
+        <div class="story-content" style="animation: fadeInUp 0.5s ease-out">
+            <h2>${story.title}</h2>
+            ${story.value ? `<div class="stat-highlight">${story.value}</div>` : ''}
+            <p>${story.subtitle}</p>
+            ${story.shareButton ? `
+                <button onclick="shareResults()" class="share-button">
+                    Share Results
+                </button>
+            ` : ''}
         </div>
     `;
 
-    resultsDiv.innerHTML = html;
-    
-    loadNFTPreview(data);
-    createChainActivityChart(data);
-    createVolumeTimelineChart(data);
-}
-
-function createChainActivityChart(data) {
-    const ctx = document.getElementById('chainActivityChart');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.chains.map(chain => chain.chain.toUpperCase()),
-            datasets: [{
-                label: 'Transacciones',
-                data: data.chains.map(chain => chain.numberOfTransactions),
-                backgroundColor: [
-                    '#627eea', // ethereum
-                    '#28a0f0', // arbitrum
-                    '#ff0420', // optimism
-                    '#0052ff', // base
-                    '#fdb82b'  // scroll
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Actividad por Cadena',
-                    color: '#e2e8f0'
-                },
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: '#334155'
-                    },
-                    ticks: {
-                        color: '#e2e8f0'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: '#e2e8f0'
-                    }
-                }
-            }
-        }
-    });
-}
-
-function createVolumeTimelineChart(data) {
-    if (!data.dexStats) return;
-
-    const ctx = document.getElementById('volumeTimelineChart');
-    const chainVolumes = Object.entries(data.dexStats.chains).map(([chain, stats]) => ({
-        chain,
-        volume: stats.volumeUSD
-    }));
-
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: chainVolumes.map(cv => cv.chain.toUpperCase()),
-            datasets: [{
-                data: chainVolumes.map(cv => cv.volume),
-                backgroundColor: [
-                    '#627eea',
-                    '#28a0f0',
-                    '#ff0420',
-                    '#0052ff',
-                    '#fdb82b'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Volumen por Cadena',
-                    color: '#e2e8f0'
-                }
-            }
-        }
-    });
-}
-
-async function checkMintEligibility(address, stats) {
-    try {
-        const response = await fetch(`/api/nft/eligibility/${address}`);
-        const { canMint } = await response.json();
-        
-        if (canMint) {
-            const mintButton = document.createElement('button');
-            mintButton.innerHTML = 'Mint Your Year in Crypto NFT';
-            mintButton.onclick = () => mintNFT(address, stats);
-            document.getElementById('results').appendChild(mintButton);
-        }
-    } catch (error) {
-        console.error('Error checking mint eligibility:', error);
+    // Configurar temporizador para la siguiente historia
+    if (index < storyData.length - 1) {
+        storyTimeout = setTimeout(() => showStory(index + 1), STORY_DURATION);
     }
 }
 
-async function mintNFT(address, stats) {
-    try {
-        // Conectar con la wallet del usuario
-        if (typeof window.ethereum === 'undefined') {
-            alert('Please install MetaMask!');
-            return;
-        }
-        
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
-        
-        const response = await fetch('/api/nft/mint', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address, stats })
-        });
-        
-        const { txHash } = await response.json();
-        alert(`NFT minting started! Transaction: ${txHash}`);
-    } catch (error) {
-        alert('Error minting NFT: ' + error.message);
+function navigateStory(direction) {
+    const newIndex = currentStory + direction;
+    if (newIndex >= 0 && newIndex < storyData.length) {
+        showStory(newIndex);
     }
 }
 
-async function loadNFTPreview(stats) {
-    try {
-        const response = await fetch(`/nft/preview`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ stats })
-        });
-        
-        console.log('Response status:', response.status);
-        if (response.ok) {
-            const svgData = await response.text();
-            const nftImage = document.getElementById('nft-image');
-            nftImage.innerHTML = '';
-            nftImage.innerHTML = svgData;
-            console.log('NFT container:', nftImage.innerHTML);
-        }
-    } catch (error) {
-        console.error('Error loading NFT preview:', error);
+function shareResults() {
+    // Implementar funcionalidad de compartir
+    alert('Share functionality coming soon!');
+}
+
+// Prevenir reconexión automática
+window.addEventListener('load', () => {
+    if (window.ethereum) {
+        window.ethereum.autoRefreshOnNetworkChange = false;
     }
-} 
+});

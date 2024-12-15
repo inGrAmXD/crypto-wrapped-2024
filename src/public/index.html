@@ -1,21 +1,62 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tu Año en Crypto</title>
+    <title>Your Crypto Wrapped 2023</title>
     <link rel="stylesheet" href="/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="hero-section">
-        <h1>Tu Año en Crypto</h1>
-        <div class="search-container">
-            <input type="text" id="addressInput" placeholder="Ingresa tu dirección ETH">
-            <button onclick="searchAddress()">Buscar</button>
+    <div class="initial-screen" id="initialScreen">
+        <div class="hero-content">
+            <h1>Your Crypto Wrapped 2024</h1>
+            <p class="subtitle">Discover your year in Web3</p>
+            <div class="wallet-container">
+                <button id="connectWalletBtn" class="connect-wallet-btn">
+                    <span class="btn-text">Connect Wallet</span>
+                    <span class="btn-icon">→</span>
+                </button>
+                <button id="disconnectWalletBtn" class="disconnect-wallet-btn" style="display: none;">
+                    <span class="btn-text">Disconnect Wallet</span>
+                    <span class="btn-icon">←</span>
+                </button>
+                <span id="walletAddress" class="wallet-address"></span>
+            </div>
+        </div>
+        <div class="gradient-bg"></div>
+    </div>
+
+    <!-- Modal de selección de wallet -->
+    <div id="walletModal" class="wallet-modal" style="display: none;">
+        <div class="wallet-modal-content">
+            <h2>Connect Your Wallet</h2>
+            <div class="wallet-options">
+                <button class="wallet-option" data-wallet="metamask">
+                    <img src="https://cdn.iconscout.com/icon/free/png-256/metamask-2728406-2261817.png" alt="MetaMask">
+                    MetaMask
+                </button>
+                <button class="wallet-option" data-wallet="phantom">
+                    <img src="https://cdn.iconscout.com/icon/free/png-256/phantom-3521426-2944869.png" alt="Phantom">
+                    Phantom
+                </button>
+            </div>
+            <button class="close-modal">×</button>
         </div>
     </div>
-    <div class="dashboard-container" id="results"></div>
+
+    <div class="stories-container" id="storiesContainer" style="display: none;">
+        <div class="story-progress-bar">
+            <div class="progress-segments"></div>
+        </div>
+        <div class="stories-content"></div>
+        <button class="story-nav-btn prev-btn">←</button>
+        <button class="story-nav-btn next-btn">→</button>
+    </div>
+
     <script src="/script.js"></script>
 </body>
 </html> 
