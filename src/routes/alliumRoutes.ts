@@ -1,8 +1,15 @@
 import { CryptoYearAnalyzer } from "../CryptoYearAnalyzer";
 import { file } from "bun";
 import { join } from "path";
+import { ethers } from 'ethers';
 
 const analyzer = new CryptoYearAnalyzer(process.env.API_KEY || "");
+
+const NFT_CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS_OPTIMISM || '';
+const NFT_ABI = [
+    "function mint(address to, string memory tokenURI) public",
+    "function hasMinted(address user) public view returns (bool)"
+];
 
 export default async function alliumRoutes(req: Request): Promise<Response> {
     const url = new URL(req.url);
@@ -35,6 +42,70 @@ export default async function alliumRoutes(req: Request): Promise<Response> {
         } catch (error) {
             return new Response(JSON.stringify({ 
                 error: error instanceof Error ? error.message : "Error desconocido" 
+            }), {
+                status: 500,
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
+    }
+
+    // Nuevo endpoint para minteo
+    if (path === '/api/mint' && req.method === 'POST') {
+        try {
+            const { address } = await req.json();
+
+            if (!address) {
+                return new Response(JSON.stringify({ error: "Dirección requerida" }), {
+                    status: 400,
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                });
+            }
+
+            // Obtener los datos del año
+            const stats = await analyzer.getYearInCryptoStats(address);
+
+            // Preparar los datos del NFT
+            const nftData = {
+                contractAddress: process.env.CONTRACT_ADDRESS_OPTIMISM,
+                abi: ["function mint(string memory tokenURI) public"],
+                chainId: 11155420, // Optimism Sepolia
+                metadata: {
+                    name: `Crypto Year in Review 2024 - ${address.substring(0, 6)}`,
+                    description: "Your Web3 journey of 2024",
+                    image: "ipfs://...", // Aquí irá la imagen generada
+                    attributes: [
+                        {
+                            trait_type: "Total Transactions",
+                            value: stats.totalTransactions
+                        },
+                        {
+                            trait_type: "Most Used Chain",
+                            value: stats.mostUsedChain
+                        },
+                        {
+                            trait_type: "Total Value Transferred",
+                            value: stats.totalValueTransferred
+                        }
+                    ]
+                }
+            };
+
+            return new Response(JSON.stringify(nftData), {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+
+        } catch (error) {
+            return new Response(JSON.stringify({ 
+                error: error instanceof Error ? error.message : "Error en el minteo" 
             }), {
                 status: 500,
                 headers: { 
@@ -78,4 +149,10 @@ function getContentType(path: string): string {
         'ico': 'image/x-icon'
     };
     return contentTypes[ext || ''] || 'text/plain';
+}
+
+async function uploadToIPFS(metadata: any): Promise<string> {
+    // Implementar lógica de subida a IPFS
+    // Puedes usar servicios como Pinata o nft.storage
+    return "ipfs://...";
 } 
