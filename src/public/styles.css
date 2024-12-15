@@ -244,3 +244,316 @@ h1 {
     font-size: 24px;
     cursor: pointer;
 }
+
+.loading-screen {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(45deg, #1DB954, #191414);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+}
+
+.loading-content {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #1DB954;
+    border-top: 5px solid transparent;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.start-wrapped-btn {
+    margin-top: 2rem;
+    padding: 1.2rem 2.5rem;
+    font-size: 1.4rem;
+    border: none;
+    border-radius: 50px;
+    background: #1DB954;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 15px rgba(29, 185, 84, 0.3);
+}
+
+.start-wrapped-btn:hover {
+    transform: scale(1.05);
+    background: #1ed760;
+    box-shadow: 0 6px 20px rgba(29, 185, 84, 0.4);
+}
+
+.start-wrapped-btn .btn-icon {
+    font-size: 1.6rem;
+    transition: transform 0.3s ease;
+}
+
+.start-wrapped-btn:hover .btn-icon {
+    transform: translateX(5px);
+}
+
+.connected-content {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.connected-content h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(to right, #fff, #1DB954);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.connected-content p {
+    font-size: 1.2rem;
+    margin: 0.8rem 0;
+    color: #ffffff;
+}
+
+.connected-content span {
+    color: #1DB954;
+    font-weight: bold;
+}
+
+.wallet-connected-screen {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    background: #000;
+    position: static;
+    padding: 2rem 1rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.connected-content {
+    width: 100%;
+    max-width: 800px;
+    margin: 2rem auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.connected-content h2 {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    margin-bottom: clamp(2rem, 4vw, 3rem);
+    background: linear-gradient(to right, #fff, #1DB954);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+    text-align: center;
+}
+
+.wallet-info {
+    background: rgba(0, 32, 10, 0.5);
+    padding: clamp(1.5rem, 3vw, 2rem);
+    border-radius: 20px;
+    margin: 2rem 0;
+    border: 1px solid rgba(29, 185, 84, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.address-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.address {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: monospace;
+    background: rgba(29, 185, 84, 0.1);
+    padding: 8px 16px;
+    border-radius: 12px;
+}
+
+.copy-address {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.copy-address:hover {
+    background: rgba(29, 185, 84, 0.1);
+}
+
+.wallet-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
+}
+
+.stat-item {
+    background: rgba(0, 32, 10, 0.5);
+    padding: clamp(1.5rem, 3vw, 2rem);
+    border-radius: 15px;
+    border: 1px solid rgba(29, 185, 84, 0.2);
+    backdrop-filter: blur(10px);
+    transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+}
+
+.stat-value {
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: #1DB954;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.stat-label {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    color: #ffffff;
+}
+
+.start-wrapped-btn {
+    position: relative;
+    margin: 2rem auto;
+    width: calc(100% - 2rem);
+    max-width: 400px;
+}
+
+/* Animaciones */
+.animate-in {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Media Queries */
+@media (max-width: 768px) {
+    .wallet-info p {
+        font-size: 1rem;
+    }
+    
+    .address {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .wallet-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .wallet-info,
+    .stat-item {
+        background: rgba(0, 32, 10, 0.7);
+    }
+}
+
+/* Asegurar que el contenido no sea más alto que la pantalla en dispositivos grandes */
+@media (min-height: 800px) {
+    .connected-content {
+        max-height: 90vh;
+    }
+}
+
+/* Ajustar para pantallas pequeñas */
+@media (max-height: 700px) {
+    .wallet-connected-screen {
+        align-items: flex-start;
+        padding-top: 2rem;
+    }
+    
+    .connected-content {
+        gap: 1rem;
+    }
+}
+
+/* Asegurar que el contenido tenga espacio suficiente en pantallas pequeñas */
+@media (max-height: 800px) {
+    .wallet-connected-screen {
+        padding-top: 1rem;
+        align-items: flex-start;
+    }
+
+    .connected-content {
+        margin-top: 1rem;
+    }
+}
+
+/* Ajustes para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .wallet-connected-screen {
+        padding: 1rem;
+    }
+
+    .connected-content {
+        gap: 1.5rem;
+    }
+
+    .wallet-info {
+        padding: 1.5rem;
+    }
+
+    .stat-item {
+        padding: 1.5rem;
+    }
+}
+
+/* Mantener el botón visible al hacer scroll en móviles */
+.start-wrapped-btn {
+    position: sticky;
+    bottom: 2rem;
+    margin-top: 2rem;
+}

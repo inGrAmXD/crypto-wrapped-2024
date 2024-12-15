@@ -1,131 +1,31 @@
-let userAddress = null;
-let currentStory = 0;
+// Variables globales
+let provider = null;
+let signer = null;
 let storyData = [];
+let currentStory = 0;
 let storyTimeout;
-let currentWalletType = null;
-
-// Configuración de historias
 const STORY_DURATION = 5000; // 5 segundos por historia
 
-function showWalletModal() {
-    const modal = document.getElementById('walletModal');
-    modal.style.display = 'flex';
-}
+// Agregar array de mensajes de carga
+const loadingMessages = [
+    "Analyzing your transactions...",
+    "Calculating your trading volume...",
+    "Finding your favorite chains...",
+    "Preparing your crypto story...",
+    "Almost ready..."
+];
 
-function hideWalletModal() {
-    const modal = document.getElementById('walletModal');
-    modal.style.display = 'none';
-}
+// Cache para los datos de usuario
+let userStatsCache = null;
 
-async function connectSpecificWallet(walletType) {
-    hideWalletModal();
-
-    try {
-        // Primero desconectamos cualquier wallet existente
-        await forceDisconnectAll();
-
-        if (walletType === 'metamask') {
-            if (typeof window.ethereum === 'undefined') {
-                alert('Please install MetaMask!');
-                return;
-            }
-            
-            // Forzar nueva conexión de MetaMask
-            const accounts = await window.ethereum.request({
-                method: 'wallet_requestPermissions',
-                params: [{
-                    eth_accounts: {}
-                }]
-            });
-
-            if (!accounts || accounts.length === 0) {
-                throw new Error('No accounts selected');
-            }
-
-            const selectedAccounts = await window.ethereum.request({
-                method: 'eth_requestAccounts'
-            });
-
-            userAddress = selectedAccounts[0];
-            currentWalletType = 'metamask';
-
-        } else if (walletType === 'phantom') {
-            if (typeof window.solana === 'undefined') {
-                alert('Please install Phantom!');
-                return;
-            }
-
-            const { solana } = window;
-            
-            // Forzar desconexión de Phantom
-            if (solana.isConnected) {
-                await solana.disconnect();
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-
-            try {
-                const response = await solana.connect({ onlyIfTrusted: false });
-                userAddress = response.publicKey.toString();
-                currentWalletType = 'phantom';
-            } catch (err) {
-                console.error("Phantom connection error:", err);
-                throw new Error('Failed to connect Phantom');
-            }
-        }
-
-        if (userAddress) {
-            updateUIForConnectedWallet();
-            await initializeStories();
-            setupWalletListeners();
-        }
-
-    } catch (error) {
-        console.error('Wallet connection error:', error);
-        alert('Error connecting wallet: ' + error.message);
-        await forceDisconnectAll();
-    }
-}
-
-async function forceDisconnectAll() {
-    try {
-        // Desconectar MetaMask
-        if (window.ethereum) {
-            try {
-                await window.ethereum.request({
-                    method: "wallet_requestPermissions",
-                    params: [{
-                        eth_accounts: {}
-                    }]
-                });
-            } catch (e) {
-                console.log("MetaMask disconnect error:", e);
-            }
-        }
-
-        // Desconectar Phantom
-        if (window.solana?.isConnected) {
-            try {
-                await window.solana.disconnect();
-                await new Promise(resolve => setTimeout(resolve, 100));
-            } catch (e) {
-                console.log("Phantom disconnect error:", e);
-            }
-        }
-
-        // Limpiar estado
-        userAddress = null;
-        currentWalletType = null;
-        
-        // Limpiar localStorage y sessionStorage
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Actualizar UI
-        updateUIForDisconnected();
-
-    } catch (error) {
-        console.error('Force disconnect error:', error);
-    }
+// Funciones de UI
+function updateUIForConnectedWallet() {
+    if (!walletConnector.userAddress) return;
+    
+    document.getElementById('walletAddress').textContent = 
+        `${walletConnector.userAddress.substring(0, 6)}...${walletConnector.userAddress.substring(-4)}`;
+    document.getElementById('connectWalletBtn').style.display = 'none';
+    document.getElementById('disconnectWalletBtn').style.display = 'flex';
 }
 
 function updateUIForDisconnected() {
@@ -136,160 +36,53 @@ function updateUIForDisconnected() {
     document.getElementById('initialScreen').style.display = 'flex';
 }
 
-function updateUIForConnectedWallet() {
-    if (!userAddress) return;
-    
-    document.getElementById('walletAddress').textContent = 
-        `${userAddress.substring(0, 6)}...${userAddress.substring(38)}`;
-    document.getElementById('connectWalletBtn').style.display = 'none';
-    document.getElementById('disconnectWalletBtn').style.display = 'flex';
+function showWalletModal() {
+    const modal = document.getElementById('walletModal');
+    modal.style.display = 'flex';
+    modal.style.zIndex = '1000';
 }
 
-function setupWalletListeners() {
-    // Limpiar listeners existentes
-    if (window.ethereum) {
-        window.ethereum.removeAllListeners?.();
-    }
-    
-    if (currentWalletType === 'metamask' && window.ethereum) {
-        window.ethereum.on('accountsChanged', async (accounts) => {
-            if (!accounts || accounts.length === 0) {
-                await forceDisconnectAll();
-            }
-        });
-
-        window.ethereum.on('disconnect', async () => {
-            await forceDisconnectAll();
-        });
-    }
-
-    if (currentWalletType === 'phantom' && window.solana) {
-        window.solana.on('disconnect', async () => {
-            await forceDisconnectAll();
-        });
-    }
+function hideWalletModal() {
+    const modal = document.getElementById('walletModal');
+    modal.style.display = 'none';
 }
-
-// Función principal de conexión
-async function connectWallet() {
-    if (userAddress) {
-        await forceDisconnectAll();
-    }
-    showWalletModal();
-}
-
-// Event Listeners
-document.addEventListener('DOMContentLoaded', async () => {
-    // Forzar desconexión al inicio
-    await forceDisconnectAll();
-
-    // Configurar listeners
-    document.querySelectorAll('.wallet-option').forEach(button => {
-        button.addEventListener('click', async () => {
-            await connectSpecificWallet(button.dataset.wallet);
-        });
-    });
-
-    document.querySelector('.close-modal').addEventListener('click', hideWalletModal);
-    
-    document.getElementById('walletModal').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            hideWalletModal();
-        }
-    });
-
-    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
-    document.getElementById('disconnectWalletBtn').addEventListener('click', forceDisconnectAll);
-});
 
 // Funciones de historias
-async function initializeStories() {
-    // Simular carga de datos
-    await loadUserData();
-    
-    // Ocultar pantalla inicial
-    document.getElementById('initialScreen').style.display = 'none';
-    
-    // Mostrar contenedor de historias
-    const storiesContainer = document.getElementById('storiesContainer');
-    storiesContainer.style.display = 'block';
-    
-    // Inicializar barra de progreso
-    initializeProgressBar();
-    
-    // Mostrar primera historia
-    showStory(0);
-}
-
 async function loadUserData() {
-    try {
-        if (!userAddress) throw new Error('No wallet connected');
+    // Aquí irían las llamadas reales a las APIs
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simular tiempo de carga
 
-        // Obtener datos reales de la API
-        const stats = await getAddressStats(userAddress);
-        
-        // Transformar los datos para las historias
-        storyData = [
-            {
-                type: 'welcome',
-                title: "Welcome to Your Crypto Year in Review",
-                subtitle: `Let's explore your Web3 journey of 2024, ${userAddress.substring(0, 6)}...`
-            },
-            {
-                type: 'transactions',
-                title: "Your Transaction Count",
-                value: stats.totalTransactions.toString(),
-                subtitle: "Total transactions across all chains"
-            },
-            {
-                type: 'volume',
-                title: "Total Value Transferred",
-                value: `${stats.totalValueTransferred.toFixed(4)} ETH`,
-                subtitle: `Across ${stats.chains.filter(c => c.numberOfTransactions > 0).length} chains`
-            },
-            {
-                type: 'chains',
-                title: "Chain Activity",
-                value: stats.mostUsedChain,
-                subtitle: `Most active on ${stats.mostUsedChain} with ${
-                    stats.chains.find(c => c.chain === stats.mostUsedChain)?.numberOfTransactions || 0
-                } transactions`
-            },
-            {
-                type: 'contracts',
-                title: "Smart Contract Interactions",
-                value: stats.totalContractsUsed.toString(),
-                subtitle: "Different contracts interacted with"
-            }
-        ];
-
-        // Si hay actividad DEX, agregar historia de DEX
-        if (stats.dexStats.totalVolumeUSD > 0) {
-            storyData.push({
-                type: 'dex',
-                title: "DEX Activity",
-                value: `$${stats.dexStats.totalVolumeUSD.toLocaleString()}`,
-                subtitle: `Total volume across ${Object.keys(stats.dexStats.chains).length} chains`
-            });
-        }
-
-        // Agregar historia final
-        storyData.push({
+    storyData = [
+        {
+            type: 'welcome',
+            title: "Welcome to Your Crypto Year in Review",
+            subtitle: "Let's explore your Web3 journey of 2023"
+        },
+        {
+            type: 'transactions',
+            title: "Your Transaction Count",
+            value: "127",
+            subtitle: "You're in the top 10% of active traders!"
+        },
+        {
+            type: 'volume',
+            title: "Total Trading Volume",
+            value: "$43,291",
+            subtitle: "Across zkSync and Optimism"
+        },
+        {
+            type: 'favorite',
+            title: "Your Favorite Chain",
+            value: "zkSync Era",
+            subtitle: "With 89 transactions"
+        },
+        {
             type: 'summary',
             title: "That's a Wrap!",
             subtitle: "Share your crypto journey with friends",
             shareButton: true
-        });
-
-    } catch (error) {
-        console.error('Error loading user data:', error);
-        storyData = [{
-            type: 'error',
-            title: "Oops!",
-            subtitle: "There was an error loading your data. Please try again.",
-            error: true
-        }];
-    }
+        }
+    ];
 }
 
 function initializeProgressBar() {
@@ -302,7 +95,10 @@ function initializeProgressBar() {
 function showStory(index) {
     if (index < 0 || index >= storyData.length) return;
     
-    clearTimeout(storyTimeout);
+    if (storyTimeout) {
+        clearTimeout(storyTimeout);
+    }
+    
     currentStory = index;
     
     // Actualizar barra de progreso
@@ -321,37 +117,18 @@ function showStory(index) {
     const story = storyData[index];
     const storiesContent = document.querySelector('.stories-content');
     
-    let content = `
+    storiesContent.innerHTML = `
         <div class="story-content" style="animation: fadeInUp 0.5s ease-out">
             <h2>${story.title}</h2>
-    `;
-
-    if (story.error) {
-        content += `
-            <div class="error-message">
-                <p>${story.subtitle}</p>
-                <button onclick="retryConnection()" class="retry-button">
-                    Try Again
-                </button>
-            </div>
-        `;
-    } else {
-        if (story.value) {
-            content += `<div class="stat-highlight">${story.value}</div>`;
-        }
-        content += `<p>${story.subtitle}</p>`;
-        
-        if (story.shareButton) {
-            content += `
+            ${story.value ? `<div class="stat-highlight">${story.value}</div>` : ''}
+            <p>${story.subtitle}</p>
+            ${story.shareButton ? `
                 <button onclick="shareResults()" class="share-button">
                     Share Results
                 </button>
-            `;
-        }
-    }
-
-    content += `</div>`;
-    storiesContent.innerHTML = content;
+            ` : ''}
+        </div>
+    `;
 
     // Configurar temporizador para la siguiente historia
     if (index < storyData.length - 1) {
@@ -359,8 +136,79 @@ function showStory(index) {
     }
 }
 
-function retryConnection() {
-    initializeStories();
+// Función para mostrar la pantalla de carga
+function showLoadingScreen() {
+    document.getElementById('walletConnectedScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+}
+
+// Función para actualizar mensajes de carga
+async function updateLoadingMessages() {
+    const loadingMessageElement = document.getElementById('loadingMessage');
+    for (const message of loadingMessages) {
+        loadingMessageElement.textContent = message;
+        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 segundos por mensaje
+    }
+}
+
+// Modificar la función initializeStories
+async function initializeStories(statsData) {
+    if (!statsData) {
+        console.error('No stats data available');
+        return;
+    }
+
+    try {
+        // Crear las historias basadas en los datos reales
+        storyData = [
+            {
+                type: 'welcome',
+                title: "Welcome to Your Crypto Year in Review",
+                subtitle: "Let's explore your Web3 journey of 2023"
+            },
+            {
+                type: 'transactions',
+                title: "Your Transaction Count",
+                value: formatNumber(statsData.totalTransactions),
+                subtitle: `Across ${statsData.chains.filter(chain => chain.numberOfTransactions > 0).length} different chains`
+            },
+            {
+                type: 'volume',
+                title: "Total Value Transferred",
+                value: formatUSD(statsData.totalValueTransferred),
+                subtitle: `With ${formatNumber(statsData.totalContractsUsed)} different contracts`
+            },
+            {
+                type: 'chain',
+                title: "Your Most Active Chain",
+                value: statsData.mostUsedChain.charAt(0).toUpperCase() + statsData.mostUsedChain.slice(1),
+                subtitle: `With ${formatNumber(statsData.chains.find(c => c.chain === statsData.mostUsedChain)?.numberOfTransactions || 0)} transactions`
+            },
+            {
+                type: 'summary',
+                title: "That's a Wrap!",
+                subtitle: "Share your crypto journey with friends",
+                shareButton: true
+            }
+        ];
+
+        // Ocultar todas las otras pantallas
+        document.getElementById('initialScreen').style.display = 'none';
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('walletConnectedScreen').style.display = 'none';
+
+        // Mostrar contenedor de historias
+        const storiesContainer = document.getElementById('storiesContainer');
+        storiesContainer.style.display = 'block';
+        
+        // Inicializar y mostrar historias
+        initializeProgressBar();
+        showStory(0);
+
+    } catch (error) {
+        console.error('Error initializing stories:', error);
+        alert('Error loading your crypto journey. Please try again.');
+    }
 }
 
 function navigateStory(direction) {
@@ -371,9 +219,399 @@ function navigateStory(direction) {
 }
 
 function shareResults() {
-    // Implementar funcionalidad de compartir
     alert('Share functionality coming soon!');
 }
+
+// Clase WalletConnector
+class WalletConnector {
+    constructor() {
+        this.provider = null;
+        this.signer = null;
+        this.userAddress = null;
+        this.currentWalletType = null;
+    }
+
+    async connectMetaMask() {
+        try {
+            if (!window.ethereum) {
+                throw new Error('MetaMask is not installed');
+            }
+
+            // Forzar desconexión primero
+            if (window.ethereum.selectedAddress) {
+                await window.ethereum.request({
+                    method: "wallet_requestPermissions",
+                    params: [{
+                        eth_accounts: {}
+                    }]
+                });
+            }
+
+            // Crear nuevo provider
+            this.provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+            
+            // Forzar nuevo popup de conexión
+            await this.provider.send("eth_requestAccounts", []);
+
+            // Obtener nuevo signer
+            this.signer = this.provider.getSigner();
+            this.userAddress = await this.signer.getAddress();
+            this.currentWalletType = 'metamask';
+
+            return {
+                address: this.userAddress,
+                provider: this.provider,
+                signer: this.signer
+            };
+
+        } catch (error) {
+            console.error('MetaMask connection error:', error);
+            throw error;
+        }
+    }
+
+    async connectPhantom() {
+        try {
+            if (!window.solana || !window.solana.isPhantom) {
+                throw new Error('Phantom is not installed');
+            }
+
+            // Forzar desconexión primero
+            if (window.solana.isConnected) {
+                await window.solana.disconnect();
+                // Pequeña pausa para asegurar la desconexión
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            // Forzar nueva conexión
+            const resp = await window.solana.connect({ onlyIfTrusted: false });
+            this.userAddress = resp.publicKey.toString();
+            this.currentWalletType = 'phantom';
+            
+            return {
+                address: this.userAddress,
+                publicKey: resp.publicKey
+            };
+
+        } catch (error) {
+            console.error('Phantom connection error:', error);
+            throw error;
+        }
+    }
+
+    async disconnect() {
+        try {
+            if (this.currentWalletType === 'metamask' && window.ethereum) {
+                // Limpiar la caché de permisos de MetaMask
+                try {
+                    await window.ethereum.request({
+                        method: "wallet_requestPermissions",
+                        params: [{
+                            eth_accounts: {}
+                        }]
+                    });
+                } catch (e) {
+                    console.log("MetaMask permission reset error:", e);
+                }
+                this.provider = null;
+                this.signer = null;
+            } else if (this.currentWalletType === 'phantom' && window.solana?.isConnected) {
+                await window.solana.disconnect();
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            this.userAddress = null;
+            this.currentWalletType = null;
+            
+            // Limpiar cualquier caché del navegador
+            localStorage.removeItem('walletconnect');
+            localStorage.removeItem('WALLETCONNECT_DEEPLINK_CHOICE');
+            
+        } catch (error) {
+            console.error('Disconnect error:', error);
+            throw error;
+        }
+    }
+}
+
+// Instancia global del WalletConnector
+const walletConnector = new WalletConnector();
+
+// Función mejorada para obtener estadísticas
+async function fetchUserStats(address) {
+    // Si ya tenemos los datos en cache, los retornamos
+    if (userStatsCache) {
+        return userStatsCache;
+    }
+
+    try {
+        const response = await fetch('/api/stats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ address })
+        });
+
+        if (!response.ok) {
+            throw new Error('Error fetching user stats');
+        }
+
+        const data = await response.json();
+        userStatsCache = data; // Guardamos en cache
+        return data;
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        return null;
+    }
+}
+
+// Función para limpiar cache al desconectar
+async function forceCleanup() {
+    userStatsCache = null; // Limpiar cache
+    localStorage.clear();
+    sessionStorage.clear();
+    // ... resto del código de cleanup
+}
+
+// Función mejorada para mostrar la pantalla de wallet conectada
+async function showWalletConnectedScreen(stats) {
+    if (!stats) {
+        console.error('No stats available');
+        return;
+    }
+
+    // Ocultar otras pantallas
+    document.getElementById('initialScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('storiesContainer').style.display = 'none';
+
+    const walletConnectedScreen = document.getElementById('walletConnectedScreen');
+    
+    // Asegurarse de que la pantalla sea visible
+    walletConnectedScreen.style.display = 'flex';
+    walletConnectedScreen.style.opacity = '0';
+
+    // Actualizar contenido
+    const content = `
+        <div class="connected-content">
+            <h2 class="animate-in">Wallet Connected!</h2>
+            
+            <div class="wallet-info animate-in" style="animation-delay: 0.2s">
+                <p>Connected to: <span class="highlight">${walletConnector.currentWalletType.toUpperCase()}</span></p>
+                <p class="address-container">
+                    Address: 
+                    <span class="address highlight">
+                        ${walletConnector.userAddress}
+                        <button class="copy-address" onclick="copyAddress('${walletConnector.userAddress}')">
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#1DB954" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>
+                        </button>
+                    </span>
+                </p>
+            </div>
+            
+            <div class="wallet-stats animate-in" style="animation-delay: 0.4s">
+                <div class="stat-item">
+                    <div class="stat-value counter" data-target="${stats.totalTransactions}">0</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">$<span class="counter" data-target="${stats.totalValueTransferred}">0</span></div>
+                    <div class="stat-label">Total Value Transferred</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value chain-name">${stats.mostUsedChain.charAt(0).toUpperCase() + stats.mostUsedChain.slice(1)}</div>
+                    <div class="stat-label">Most Used Chain</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value counter" data-target="${stats.chains.filter(chain => chain.numberOfTransactions > 0).length}">0</div>
+                    <div class="stat-label">Active Chains</div>
+                </div>
+            </div>
+            
+            <button id="startWrappedBtn" class="start-wrapped-btn animate-in" style="animation-delay: 0.6s">
+                View My Crypto Wrapped
+                <span class="btn-icon">→</span>
+            </button>
+        </div>
+    `;
+
+    walletConnectedScreen.innerHTML = content;
+
+    // Agregar event listener al botón
+    const startWrappedBtn = document.getElementById('startWrappedBtn');
+    if (startWrappedBtn) {
+        startWrappedBtn.addEventListener('click', async () => {
+            walletConnectedScreen.style.opacity = '0';
+            setTimeout(async () => {
+                walletConnectedScreen.style.display = 'none';
+                await initializeStories(stats); // Usar los stats que ya tenemos
+            }, 500);
+        });
+    }
+
+    // Mostrar con animación
+    requestAnimationFrame(() => {
+        walletConnectedScreen.style.opacity = '1';
+        animateNumbers();
+    });
+}
+
+// Función para animar números
+function animateNumbers() {
+    const counters = document.querySelectorAll('.counter');
+    const animationDuration = 1500;
+    const framesPerSecond = 60;
+    const totalFrames = animationDuration / 1000 * framesPerSecond;
+
+    counters.forEach(counter => {
+        const target = parseFloat(counter.dataset.target);
+        const increment = target / totalFrames;
+        let current = 0;
+        let frame = 0;
+
+        const updateCounter = () => {
+            current += increment;
+            frame++;
+
+            if (frame <= totalFrames) {
+                counter.textContent = formatNumber(Math.floor(current));
+                requestAnimationFrame(updateCounter);
+            } else {
+                counter.textContent = formatNumber(target);
+            }
+        };
+
+        updateCounter();
+    });
+}
+
+// Función para copiar dirección
+function copyAddress(address) {
+    navigator.clipboard.writeText(address).then(() => {
+        const copyBtn = document.querySelector('.copy-address');
+        copyBtn.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24">
+                <path fill="#1DB954" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+        `;
+        setTimeout(() => {
+            copyBtn.innerHTML = `
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path fill="#1DB954" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                </svg>
+            `;
+        }, 2000);
+    });
+}
+
+// Modificar la función connectSpecificWallet
+async function connectSpecificWallet(walletType) {
+    try {
+        hideWalletModal();
+        showLoadingScreen(); // Mostrar pantalla de carga
+        
+        await forceCleanup();
+        await walletConnector.disconnect();
+
+        let connectionResult;
+        
+        if (walletType === 'metamask') {
+            connectionResult = await walletConnector.connectMetaMask();
+        } else if (walletType === 'phantom') {
+            connectionResult = await walletConnector.connectPhantom();
+        }
+
+        if (connectionResult?.address) {
+            updateUIForConnectedWallet();
+            
+            // Obtener estadísticas
+            const stats = await fetchUserStats(walletConnector.userAddress);
+            
+            // Ocultar pantalla de carga
+            document.getElementById('loadingScreen').style.display = 'none';
+            
+            // Mostrar pantalla de wallet conectada con los datos
+            await showWalletConnectedScreen(stats);
+        } else {
+            throw new Error('No address returned from wallet connection');
+        }
+
+    } catch (error) {
+        console.error('Wallet connection error:', error);
+        alert('Error connecting wallet: ' + error.message);
+        document.getElementById('loadingScreen').style.display = 'none';
+        await forceCleanup();
+        await walletConnector.disconnect();
+        updateUIForDisconnected();
+    }
+}
+
+function setupWalletListeners() {
+    if (walletConnector.currentWalletType === 'metamask' && window.ethereum) {
+        window.ethereum.on('accountsChanged', async () => {
+            await walletConnector.disconnect();
+            updateUIForDisconnected();
+        });
+
+        window.ethereum.on('disconnect', async () => {
+            await walletConnector.disconnect();
+            updateUIForDisconnected();
+        });
+    }
+
+    if (walletConnector.currentWalletType === 'phantom' && window.solana) {
+        window.solana.on('disconnect', async () => {
+            await walletConnector.disconnect();
+            updateUIForDisconnected();
+        });
+    }
+}
+
+async function connectWallet() {
+    await forceCleanup();
+    await walletConnector.disconnect();
+    showWalletModal();
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', async () => {
+    // Forzar limpieza al cargar la página
+    await forceCleanup();
+    await walletConnector.disconnect();
+    updateUIForDisconnected();
+
+    document.querySelectorAll('.wallet-option').forEach(button => {
+        button.addEventListener('click', async () => {
+            await connectSpecificWallet(button.dataset.wallet);
+        });
+    });
+
+    document.querySelector('.close-modal').addEventListener('click', hideWalletModal);
+    
+    document.getElementById('walletModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            hideWalletModal();
+        }
+    });
+
+    document.getElementById('connectWalletBtn').addEventListener('click', connectWallet);
+    document.getElementById('disconnectWalletBtn').addEventListener('click', async () => {
+        await walletConnector.disconnect();
+        updateUIForDisconnected();
+    });
+
+    // Botones de navegación de historias
+    document.querySelector('.prev-btn').addEventListener('click', () => navigateStory(-1));
+    document.querySelector('.next-btn').addEventListener('click', () => navigateStory(1));
+
+    // Remover el event listener duplicado del DOMContentLoaded
+    document.getElementById('startWrappedBtn').removeEventListener('click', async () => {
+        // Este event listener ya no es necesario porque lo manejamos en showWalletConnectedScreen
+    });
+});
 
 // Prevenir reconexión automática
 window.addEventListener('load', () => {
@@ -382,24 +620,23 @@ window.addEventListener('load', () => {
     }
 });
 
-async function getAddressStats(address) {
-    try {
-        const response = await fetch('/api/stats', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ address })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Error al obtener datos');
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Error:', error);
-        throw error;
+// Función para formatear números grandes
+function formatNumber(num) {
+    if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
     }
+    return num.toString();
+}
+
+// Función para formatear valor en USD
+function formatUSD(value) {
+    if (value === 0) return '$0';
+    if (value >= 1000000) {
+        return '$' + (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+        return '$' + (value / 1000).toFixed(1) + 'K';
+    }
+    return '$' + value.toFixed(2);
 }

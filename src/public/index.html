@@ -11,6 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Pantalla inicial -->
     <div class="initial-screen" id="initialScreen">
         <div class="hero-content">
             <h1>Your Crypto Wrapped 2024</h1>
@@ -48,6 +49,49 @@
         </div>
     </div>
 
+    <!-- Pantalla de wallet conectada -->
+    <div id="walletConnectedScreen" style="display: none;" class="wallet-connected-screen">
+        <div class="connected-content">
+            <h2>Wallet Connected!</h2>
+            <div class="wallet-info">
+                <p>Connected to: <span id="connectedWalletType"></span></p>
+                <p>Address: <span id="connectedWalletAddress"></span></p>
+            </div>
+            <div class="wallet-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTransactions">--</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="totalVolume">--</div>
+                    <div class="stat-label">Trading Volume</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="favoriteChain">--</div>
+                    <div class="stat-label">Favorite Chain</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeMonths">--</div>
+                    <div class="stat-label">Active Months</div>
+                </div>
+            </div>
+            <button id="startWrappedBtn" class="start-wrapped-btn">
+                View My Crypto Wrapped
+                <span class="btn-icon">→</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pantalla de carga -->
+    <div id="loadingScreen" style="display: none;" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h2>Loading Your Crypto Journey...</h2>
+            <p id="loadingMessage">Analyzing your transactions...</p>
+        </div>
+    </div>
+
+    <!-- Contenedor de historias -->
     <div class="stories-container" id="storiesContainer" style="display: none;">
         <div class="story-progress-bar">
             <div class="progress-segments"></div>
